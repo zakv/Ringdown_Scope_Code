@@ -53,20 +53,17 @@ class AgilentScope:
         self.write(":WAVEFORM:POINTS 10240")
         self.write(":STOP")
         self.write(":WAV:DATA? CHAN%d" % channel_number)
-        time.sleep(0.01)
+        #time.sleep(0.01)
         number_digits=self.read(2)
         number_digits=int(number_digits[1])
         number_data_points=int(self.read(number_digits))
         rawdata = self.read(number_data_points)
         data = numpy.frombuffer(rawdata, 'B')
         while len(data)<number_data_points:
+            print  ("Data length should be %d, but is only %d" %
+                    (number_data_points,len(data)))
             raise BufferError( "Data length should be %d, but is only %d" %
                 (number_data_points,len(data)) )
-            #print  ("Data length should be %d, but is only %d" %
-            #        (number_data_points,len(data)))
-            #time.sleep(0.05)
-            #raw_data=self.read(number_data_points)
-            #np.append(data,numpy.frombuffer(rawdata, 'B'))
         return data
 
     def check_channel_scaling(self,channel_number=1):
@@ -95,7 +92,11 @@ class AgilentScope:
             time.sleep(0.01)
             self.write(":TRIGger:STATus?")
             trigger_status=self.read()
-        data=self.get_channel_data(channel_number) #Retrieve data from scope
+        try:
+            data=self.get_channel_data(channel_number) #Retrieve scope data
+        except BufferError:
+            print "Trying to take another trace..."
+            data=self.get_single_trace(channel_number)
         return data
 
     def get_multiple_traces(self,n_traces=10,channel_number=1):
