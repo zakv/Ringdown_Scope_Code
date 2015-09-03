@@ -11,7 +11,8 @@ class usbtmc:
         try:
             self.FILE = os.open(device, os.O_RDWR)
         except OSError:
-            raise OSError('Plug in scope and run "sudo chmod a+rw usbtmc0"')
+            raise OSError('Plug in scope and run ' +
+                    '"sudo chmod a+rw /dev/usbtmc0"')
 
     def write(self, command):
         os.write(self.FILE, command);
@@ -45,18 +46,6 @@ class AgilentScope:
         """Read an arbitrary amount of data directly from the scope"""
         return self.meas.read(length)
 
-    def convert_channel_data(self,data):
-        """Converts arrays of unsigned 8bit data into voltages"""
-        self.write(":WAV:YREF?")
-        y_reference=float(self.read(20))
-        self.write(":WAV:YOR?")
-        y_origin=float(self.read(20))
-        self.write(":WAV:YINC?")
-        y_increment=float(self.read(20))
-        #converted_data=y_reference-y_origin-data*y_increment
-        converted_data=((y_reference-1)-data)*y_increment-y_origin
-        return converted_data
-
     def get_channel_data(self, channel_number):
         """Automatically returns the y-values in volts for the specified channel"""
         self.write(":WAV:POIN:MODE RAW")
@@ -78,62 +67,56 @@ class AgilentScope:
             #time.sleep(0.05)
             #raw_data=self.read(number_data_points)
             #np.append(data,numpy.frombuffer(rawdata, 'B'))
-        data=self.convert_channel_data(data)
         return data
 
-    def get_time_data(self,channel_data):
-        """Finds the times corresponding to the channel_data
-
-        channel_data can be various lengths, hence the need to pass it as
-        an argument
-        This method assumes scope settings haven't been changed since the
-        data was taken"""
-        length=len(channel_data)
-        self.write(":WAV:XINC?")
-        delta_t=float(self.read(20))
-        self.write(":WAV:XOR?")
-        time_offset=float(self.read(20))
-        time_data=numpy.linspace(0.,length,length)
-        time_data=time_data*delta_t+time_offset
-        return time_data
-
-    def check_channel_scaling(self,channel_number):
+    def check_channel_scaling(self,channel_number=1):
         """Gets first entry as an ASCII string and prints out conversion as well"""
-        converted_data=self.get_channel_data(channel_number)
+        #Get and convert data usual way
+        series=self.get_multiple_traces(n_traces=1,
+                channel_number=channel_number)
+        converted_data=series.get_converted_data()[0,0]
+        #Get data converted by scope to ascii string for comparison
         self.write("WAV:FORM ASCII")
         self.write(":WAV:DATA? CHAN%d" % channel_number)
         number_digits=self.read(2)
         number_digits=int(number_digits[1])
         number_data_points=int(self.read(number_digits))
         ascii_data= self.read(25).split(',')[0]
-        print "ASCII: %s, and converted: %f" % (ascii_data, converted_data[0])
+        #Print data for comparison
+        print "ASCII: %s, and converted: %f" % (ascii_data, converted_data)
         return
 
     def get_single_trace(self,channel_number):
         """Takes a new trace and returns the channel_data"""
-        self.write(":SINGLE")
-        self.write(":TRIGger:STATus?")
+        self.write(":SINGLE") #Set trigger to single
+        self.write(":TRIGger:STATus?") #Wait until scope takes data
         trigger_status=self.read()
         while trigger_status!='STOP\n':
             time.sleep(0.01)
             self.write(":TRIGger:STATus?")
             trigger_status=self.read()
-        data=self.get_channel_data(channel_number)
+        data=self.get_channel_data(channel_number) #Retrieve data from scope
         return data
 
-    def get_multiple_traces(self,n_traces,channel_number=1):
-        """Takes multiple traces and returns an array with each trace as a column"""
+    def get_multiple_traces(self,n_traces=10,channel_number=1):
+        """Takes multiple traces and returns an array with each trace as a row"""
+        #Prepare object to hold data
+        series=Measurement_Series(self)
+        series.get_scope_settings()
+        #Start taking data
         one_data=self.get_single_trace(channel_number)
-        all_data=numpy.zeros([n_traces+1,len(one_data)])
-        all_data[1]=one_data
-        for j in range(2,n_traces+1):
+        all_data=numpy.zeros([n_traces,len(one_data)])
+        all_data[0]=one_data
+        for j in range(1,n_traces):
             one_data=self.get_single_trace(channel_number)
             all_data[j]=one_data
-        time_data=self.get_time_data(one_data)
-        all_data[0]=time_data
-        all_data=numpy.transpose(all_data)
-        return all_data
+        series.channel_data=all_data
+        self.unlock()
+        return series
 
+    def unlock(self):
+        """Unlocks the buttons on the scope for manual use"""
+        self.write(":KEY:LOCK DISable")
 
     def reset(self):
         """Reset the instrument"""
@@ -146,7 +129,7 @@ class Measurement_Series:
     def __init__(self,scope):
         """Initializes a Measurement_Series instance from an AgilentScope"""
         self.scope=scope
-        self.chanel_data=np.array([])
+        self.channel_data=np.array([])
         self.time_offset=None
         self.delta_t=None
         self.y_reference=None
@@ -167,15 +150,28 @@ class Measurement_Series:
         scope.write(":WAV:YINC?")
         self.y_increment=float(scope.read(20))
 
-    def __getattr__(self,converted_data):
+#This wasn't working for some reason
+#    def __getattribute__(self,converted_data):
+#        """Converts channel_data to real voltages and returns the result"""
+#        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
+#        raise IOError(str(converted_data))
+#        return converted_data
+#
+#    def __getattr__(self,time_data):
+#        """Finds the times corresponding to the channel_data"""
+#        length=len(self.channel_data)
+#        time_data=numpy.linspace(0.,length,length)
+#        time_data=time_data*self.delta_t+self.time_offset
+#        return time_data
+
+    def get_converted_data(self):
         """Converts channel_data to real voltages and returns the result"""
-        converted_data=((self.y_reference-1)-self.data)*self.y_increment-self.y_origin
+        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
         return converted_data
 
-    def get_time_data(self,channel_data):
+    def get_time_data(self):
         """Finds the times corresponding to the channel_data"""
-        length=len(self.channel_data)
-        time_data=numpy.linspace(0.,length,length)
-        time_data=self.time_data*self.delta_t+self.time_offset
+        length=self.channel_data.shape[1]
+        time_data=numpy.linspace(0.,length-1,length)
+        time_data=time_data*self.delta_t+self.time_offset
         return time_data
-
