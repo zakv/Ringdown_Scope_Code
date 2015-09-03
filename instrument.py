@@ -74,7 +74,7 @@ class AgilentScope:
         #Get and convert data usual way
         series=self.get_multiple_traces(n_traces=1,
                 channel_number=channel_number)
-        converted_data=series.get_converted_data()[0,0]
+        converted_data=series.converted_data[0,0]
         #Get data converted by scope to ascii string for comparison
         self.write("WAV:FORM ASCII")
         self.write(":WAV:DATA? CHAN%d" % channel_number)
@@ -123,7 +123,7 @@ class AgilentScope:
         self.meas.sendReset()
 
 
-class Measurement_Series:
+class Measurement_Series(object):
     """Handles the data from one series of measurements"""
 
     def __init__(self,scope):
@@ -151,27 +151,28 @@ class Measurement_Series:
         self.y_increment=float(scope.read(20))
 
 #This wasn't working for some reason
-#    def __getattr__(self,converted_data):
+    @property
+    def converted_data(self):
+        """Channel_data converted to real voltages (in volts)"""
+        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
+        return converted_data
+
+    @property
+    def time_data(self):
+        """The times (in seconds) corresponding to the channel_data"""
+        length=self.channel_data.shape[1]
+        time_data=numpy.linspace(0.,length-1,length)
+        time_data=time_data*self.delta_t+self.time_offset
+        return time_data
+
+#    def get_converted_data(self):
 #        """Converts channel_data to real voltages and returns the result"""
 #        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
-#        print "test"
 #        return converted_data
 #
-#    def __getattr__(self,time_data):
+#    def get_time_data(self):
 #        """Finds the times corresponding to the channel_data"""
 #        length=self.channel_data.shape[1]
 #        time_data=numpy.linspace(0.,length-1,length)
 #        time_data=time_data*self.delta_t+self.time_offset
 #        return time_data
-
-    def get_converted_data(self):
-        """Converts channel_data to real voltages and returns the result"""
-        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
-        return converted_data
-
-    def get_time_data(self):
-        """Finds the times corresponding to the channel_data"""
-        length=self.channel_data.shape[1]
-        time_data=numpy.linspace(0.,length-1,length)
-        time_data=time_data*self.delta_t+self.time_offset
-        return time_data
