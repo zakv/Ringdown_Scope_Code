@@ -8,8 +8,10 @@ class usbtmc:
 
     def __init__(self, device):
         self.device = device
-        self.FILE = os.open(device, os.O_RDWR)
-        #sudo chmod a+rw usbtmc0
+        try:
+            self.FILE = os.open(device, os.O_RDWR)
+        except OSError:
+            raise OSError('Plug in scope and run "sudo chmod a+rw usbtmc0"')
 
         # TODO: Test that the file opened
 
