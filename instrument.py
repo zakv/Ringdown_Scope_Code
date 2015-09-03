@@ -1,6 +1,7 @@
 import os
 import time
 import numpy
+np=numpy
 
 class usbtmc:
     """Simple implementation of a USBTMC device driver, in the style of visa.h"""
@@ -8,6 +9,7 @@ class usbtmc:
     def __init__(self, device):
         self.device = device
         self.FILE = os.open(device, os.O_RDWR)
+        #sudo chmod a+rw usbtmc0
 
         # TODO: Test that the file opened
 
@@ -136,3 +138,36 @@ class AgilentScope:
     def reset(self):
         """Reset the instrument"""
         self.meas.sendReset()
+
+
+class Measurement_Series:
+    """Handles the data from one series of measurements"""
+
+    def __init__(self,scope):
+        """Initializes a Measurement_Series instance from an AgilentScope"""
+        self.scope=scope
+        self.chanel_data=np.array([])
+        self.time_offset=None
+        self.delta_t=None
+        self.y_reference=None
+        self.y_origin=None
+        self.y_increment=None
+
+    def get_scope_settings(self):
+        """Sets attributes to reflect current scope settings"""
+        scope=self.scope
+        scope.write(":WAV:XOR?")
+        self.time_offset=float(scope.read(20))
+        scope.write(":WAV:XINC?")
+        self.delta_t=float(scope.read(20))
+        scope.write(":WAV:YREF?")
+        self.y_reference=float(scope.read(20))
+        scope.write(":WAV:YOR?")
+        self.y_origin=float(scope.read(20))
+        scope.write(":WAV:YINC?")
+        self.y_increment=float(scope.read(20))
+
+    def __getattr__(self,converted_data):
+        """Converts channel_data to real voltages and returns the result"""
+        converted_data=2+2
+        return converted_data
