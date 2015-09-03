@@ -160,19 +160,17 @@ class Measurement_Series(object):
     @property
     def time_data(self):
         """The times (in seconds) corresponding to the channel_data"""
-        length=self.channel_data.shape[1]
+        length=self.trace_length
         time_data=numpy.linspace(0.,length-1,length)
         time_data=time_data*self.delta_t+self.time_offset
         return time_data
 
-#    def get_converted_data(self):
-#        """Converts channel_data to real voltages and returns the result"""
-#        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
-#        return converted_data
-#
-#    def get_time_data(self):
-#        """Finds the times corresponding to the channel_data"""
-#        length=self.channel_data.shape[1]
-#        time_data=numpy.linspace(0.,length-1,length)
-#        time_data=time_data*self.delta_t+self.time_offset
-#        return time_data
+    @property
+    def n_traces(self):
+        """The number of traces in this Measurement_Series instance"""
+        return self.channel_data.shape[0]
+
+    @property
+    def trace_length(self):
+        """The number of data points in each trace"""
+        return self.channel_data.shape[1]
