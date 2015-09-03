@@ -1,0 +1,26 @@
+# Custom ignores
+
+# Compiled Python Files #
+#########################
+*.pyc
+
+# Linux generated files #
+#########################
+*.fuse*
+
+# Compiled Mex Files #
+######################
+*.mexa64
+
+# Tilde Backups #
+#################
+*~
+
+# Data Files #
+##############
+*.mat
+*.ascii
+
+# Random Files Matlab makes #
+#############################
+*.asv
