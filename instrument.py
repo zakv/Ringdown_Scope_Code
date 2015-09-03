@@ -151,16 +151,16 @@ class Measurement_Series:
         self.y_increment=float(scope.read(20))
 
 #This wasn't working for some reason
-#    def __getattribute__(self,converted_data):
+#    def __getattr__(self,converted_data):
 #        """Converts channel_data to real voltages and returns the result"""
 #        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
-#        raise IOError(str(converted_data))
+#        print "test"
 #        return converted_data
 #
 #    def __getattr__(self,time_data):
 #        """Finds the times corresponding to the channel_data"""
-#        length=len(self.channel_data)
-#        time_data=numpy.linspace(0.,length,length)
+#        length=self.channel_data.shape[1]
+#        time_data=numpy.linspace(0.,length-1,length)
 #        time_data=time_data*self.delta_t+self.time_offset
 #        return time_data
 
