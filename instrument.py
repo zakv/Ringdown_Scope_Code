@@ -13,8 +13,6 @@ class usbtmc:
         except OSError:
             raise OSError('Plug in scope and run "sudo chmod a+rw usbtmc0"')
 
-        # TODO: Test that the file opened
-
     def write(self, command):
         os.write(self.FILE, command);
         #time.sleep(.1)
@@ -171,5 +169,13 @@ class Measurement_Series:
 
     def __getattr__(self,converted_data):
         """Converts channel_data to real voltages and returns the result"""
-        converted_data=2+2
+        converted_data=((self.y_reference-1)-self.data)*self.y_increment-self.y_origin
         return converted_data
+
+    def get_time_data(self,channel_data):
+        """Finds the times corresponding to the channel_data"""
+        length=len(self.channel_data)
+        time_data=numpy.linspace(0.,length,length)
+        time_data=self.time_data*self.delta_t+self.time_offset
+        return time_data
+
