@@ -209,7 +209,7 @@ class Measurement_Series(object):
     @property
     def params(self):
         """Array with each row containing fit parameters"""
-        if not self._params:
+        if self._params.size==0:
             self.fit_data()
         return self._params
     @params.setter
@@ -217,9 +217,19 @@ class Measurement_Series(object):
         self._params=value
 
     @property
-    def tau_list(self):
-        """TODO"""
-        pass
+    def tau_array(self):
+        """Array of all tau values from fitting traces"""
+        return self.params[:,1]
+
+    @property
+    def tau_mean(self):
+        """The mean tau from all the fits in the Measurement_Series"""
+        return np.mean(self.tau_array)
+
+    @property
+    def tau_std(self):
+        """The standard deviation of tau from the fits"""
+        return np.std(self.tau_array)
 
     def fit_data(self):
         """Fits fit_function to each trace and stores the results"""
