@@ -285,14 +285,6 @@ class Measurement_Series(object):
         self.y_increment=series.y_increment
         self.channel_data=series.channel_data
 
-#    def plot_ringdown(self,trace_number):
-#        """Plots the ringdown and the fit"""
-#        plt.plot(self.time_data*1e6,self.channel_data[trace_number],color='k')
-#        plt.title("Ringdown")
-#        plt.ylabel("Voltage (V)")
-#        plt.xlabel("time (us)")
-#        plt.xlim(self.left_plot_limit,self.right_plot_limit)
-
     @staticmethod
     def fit_function(t,A,tau,c):
         """Function for fitting data: Gaussian with constant offset"""
