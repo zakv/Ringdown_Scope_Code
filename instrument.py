@@ -151,7 +151,7 @@ class Measurement_Series(object):
         self._n_traces=None
         self._trace_length=None
         self._did_fit=False
-        self.params=np.array([])
+        self._params=np.array([])
 
     def get_scope_settings(self):
         """Sets attributes to reflect current scope settings"""
@@ -181,7 +181,11 @@ class Measurement_Series(object):
     @property
     def converted_data(self):
         """Channel_data converted to real voltages (in volts)"""
-        converted_data=((self.y_reference-1)-self.channel_data)*self.y_increment-self.y_origin
+        channel_data=self.channel_data
+        if channel_data.size==0:
+            raise AttributeError('Series must have measurement data before '+
+                    'trying to convert it')
+        converted_data=((self.y_reference-1)-channel_data)*self.y_increment-self.y_origin
         return converted_data
 
     @property
@@ -201,6 +205,16 @@ class Measurement_Series(object):
     def trace_length(self):
         """The number of data points in each trace"""
         return self._trace_length
+
+    @property
+    def params(self):
+        """Array with each row containing fit parameters"""
+        if not self._params:
+            self.fit_data()
+        return self._params
+    @params.setter
+    def params(self,value):
+        self._params=value
 
     @property
     def tau_list(self):
