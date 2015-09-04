@@ -242,7 +242,8 @@ class Measurement_Series(object):
         j=0;
         for trace in converted_data:
             one_params=curve_fit(fit_function, time_data,
-                    trace[left_index:right_index], initial_params)[0]
+                    trace[left_index:right_index], initial_params,
+                    Dfun=self.fit_jacobian)[0]
             params_array[j]=one_params
             j+=1
         self.params=params_array
@@ -283,9 +284,15 @@ class Measurement_Series(object):
         return A*np.exp(-t/tau)+c
 
     @staticmethod
-    def fit_jacobian(t,A,tau,c):
+    def fit_jacobian(params,t,ydata,fit_function):
         """Jacobian of derivatives for fit function"""
-        return [np.exp(-t/tau),A*np.exp(-t/tau)/tau**2,np.ones(len(t))]
+        A,tau,c=params
+        exp=np.exp(-t/tau)
+        term1=exp.reshape(-1,1)
+        term2=(A*exp/tau**2).reshape(-1,1)
+        term3=np.ones((len(t),1))
+        res = np.hstack( ( term1, term2, term3) )
+        return res
 
     def plot_ringdown(self,trace_number=0):
         """Plots the ringdown and the fit"""
