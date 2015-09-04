@@ -313,15 +313,19 @@ class Measurement_Series(object):
         plt.plot(fit_times*1e6,fit_vals,color='r')
 
     def save(self):
-        """Saves measurement_series instance to disk"""
+        """Saves measurement_series instance to disk
+
+        Path is taken relative to the Ringdown_Data subdirectory"""
         if not self.file_name:
             raise AttributeError('self.file_name must be set before saving')
-        with open(self.file_name,'wb') as file:
+        file_name=os.path.join('Ringdown_Data',self.file_name)
+        with open(file_name,'wb') as file:
             pickle.dump(self,file,2)
 
     @classmethod
     def load(cls,file_name):
         """Loads the file from disk and returns result"""
+        file_name=os.path.join('Ringdown_Data',file_name)
         with open(file_name,'rb') as file:
             series=pickle.load(file)
         return series
