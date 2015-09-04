@@ -312,13 +312,16 @@ class Measurement_Series(object):
         fit_vals=self.fit_function(fit_times,*params)
         plt.plot(fit_times*1e6,fit_vals,color='r')
 
-    def save(self):
+    def save(self,overwrite=False):
         """Saves measurement_series instance to disk
 
         Path is taken relative to the Ringdown_Data subdirectory"""
         if not self.file_name:
             raise AttributeError('self.file_name must be set before saving')
         file_name=os.path.join('Ringdown_Data',self.file_name)
+        if overwrite==False and os.path.exists(file_name):
+            raise NameError('File %s already exists. ' % file_name+
+                    'Set overwrite=True to overwrite it')
         with open(file_name,'wb') as file:
             pickle.dump(self,file,2)
 
