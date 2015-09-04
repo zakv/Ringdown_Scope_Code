@@ -1,6 +1,7 @@
 import os
 import time
 import numpy
+import cPickle as pickle
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 np=numpy
@@ -152,6 +153,7 @@ class Measurement_Series(object):
         self._trace_length=None
         self._did_fit=False
         self._params=np.array([])
+        self.file_name=''
 
     def get_scope_settings(self):
         """Sets attributes to reflect current scope settings"""
@@ -309,3 +311,17 @@ class Measurement_Series(object):
         fit_times=time_data[left_index:right_index]
         fit_vals=self.fit_function(fit_times,*params)
         plt.plot(fit_times*1e6,fit_vals,color='r')
+
+    def save(self):
+        """Saves measurement_series instance to disk"""
+        if not self.file_name:
+            raise AttributeError('self.file_name must be set before saving')
+        with open(self.file_name,'wb') as file:
+            pickle.dump(self,file,2)
+
+    @classmethod
+    def load(cls,file_name):
+        """Loads the file from disk and returns result"""
+        with open(file_name,'rb') as file:
+            series=pickle.load(file)
+        return series
