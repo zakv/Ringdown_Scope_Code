@@ -1,6 +1,8 @@
 import os
 import time
 import numpy
+from math import exp
+from scipy.optimize import curve_fit
 np=numpy
 
 class usbtmc:
@@ -36,7 +38,7 @@ class AgilentScope:
 
         self.name = self.meas.getName()
 
-        print self.name
+        print "Connected to " + self.name
 
     def write(self, command):
         """Send an arbitrary command directly to the scope"""
@@ -58,7 +60,8 @@ class AgilentScope:
         number_digits=int(number_digits[1])
         number_data_points=int(self.read(number_digits))
         rawdata = self.read(number_data_points)
-        data = numpy.frombuffer(rawdata, 'B')
+        #data = numpy.frombuffer(rawdata, 'B')
+        data = numpy.frombuffer(rawdata,np.uint8)
         while len(data)<number_data_points:
             print  ("Data length should be %d, but is only %d" %
                     (number_data_points,len(data)))
@@ -106,7 +109,7 @@ class AgilentScope:
         series.get_scope_settings()
         #Start taking data
         one_data=self.get_single_trace(channel_number)
-        all_data=numpy.zeros([n_traces,len(one_data)])
+        all_data=numpy.zeros([n_traces,len(one_data)],dtype=np.uint8)
         all_data[0]=one_data
         for j in range(1,n_traces):
             one_data=self.get_single_trace(channel_number)
@@ -151,7 +154,6 @@ class Measurement_Series(object):
         scope.write(":WAV:YINC?")
         self.y_increment=float(scope.read(20))
 
-#This wasn't working for some reason
     @property
     def converted_data(self):
         """Channel_data converted to real voltages (in volts)"""
@@ -175,3 +177,7 @@ class Measurement_Series(object):
     def trace_length(self):
         """The number of data points in each trace"""
         return self.channel_data.shape[1]
+
+def fit_function(t,A,tau,c):
+    """Function for fitting data: Gaussian with constant offset"""
+    return A*exp(-t/tau)+c
