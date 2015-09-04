@@ -1,8 +1,8 @@
 import os
 import time
 import numpy
-from math import exp
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 np=numpy
 
 class usbtmc:
@@ -132,15 +132,26 @@ class AgilentScope:
 class Measurement_Series(object):
     """Handles the data from one series of measurements"""
 
+    #Class constants
+    left_plot_limit=-1.5 #time in us
+    right_plot_limit=20  #time in us
+    initial_params=(0.06,2e-6,0.02) #Amplitude, decay time, offset
+    left_fit_limit=0.7e-6 #time to begin fit
+    right_fit_limit=15e-6 #time to end fit
+
     def __init__(self,scope):
         """Initializes a Measurement_Series instance from an AgilentScope"""
         self.scope=scope
-        self.channel_data=np.array([])
+        self._channel_data=np.array([])
         self.time_offset=None
         self.delta_t=None
         self.y_reference=None
         self.y_origin=None
         self.y_increment=None
+        self._n_traces=None
+        self._trace_length=None
+        self._did_fit=False
+        self.params=np.array([])
 
     def get_scope_settings(self):
         """Sets attributes to reflect current scope settings"""
@@ -155,6 +166,17 @@ class Measurement_Series(object):
         self.y_origin=float(scope.read(20))
         scope.write(":WAV:YINC?")
         self.y_increment=float(scope.read(20))
+
+    @property
+    def channel_data(self):
+        """The uint8 data from the scope, each row is one trace"""
+        return self._channel_data
+    @channel_data.setter
+    def channel_data(self,value):
+        self._channel_data=value
+        self._n_traces=self.channel_data.shape[0]
+        self._trace_length=self.channel_data.shape[1]
+        self._did_fit=False
 
     @property
     def converted_data(self):
@@ -173,13 +195,86 @@ class Measurement_Series(object):
     @property
     def n_traces(self):
         """The number of traces in this Measurement_Series instance"""
-        return self.channel_data.shape[0]
+        return self._n_traces
 
     @property
     def trace_length(self):
         """The number of data points in each trace"""
-        return self.channel_data.shape[1]
+        return self._trace_length
 
-def fit_function(t,A,tau,c):
-    """Function for fitting data: Gaussian with constant offset"""
-    return A*exp(-t/tau)+c
+    @property
+    def tau_list(self):
+        """TODO"""
+        pass
+
+    def fit_data(self):
+        """Fits fit_function to each trace and stores the results"""
+        left_index=self.time_to_index(self.left_fit_limit)
+        right_index=self.time_to_index(self.right_fit_limit)
+        time_data=self.time_data[left_index:right_index]
+        converted_data=self.converted_data
+        initial_params=self.initial_params
+        params_array=np.zeros([self.n_traces,len(self.initial_params)])
+        j=0;
+        for trace in converted_data:
+            one_params=curve_fit(fit_function, time_data,
+                    trace[left_index:right_index], initial_params)[0]
+            params_array[j]=one_params
+            j+=1
+        self.params=params_array
+        self._did_fit=True
+
+    def time_to_index(self,time):
+        """Gives time_data index corresponding to time (in seconds)"""
+        index=(time-self.time_offset)/self.delta_t
+        index=round(index)
+        index=min([index,self.trace_length-1])
+        index=max([index,0])
+        return index
+
+    def copy_data(self,series):
+        """Copies scope data from the given series
+
+        This is helpful when updating this class while you're not near the
+        scope so you can't take any data"""
+        self.scope=series.scope
+        self.time_offset=series.time_offset
+        self.delta_t=series.delta_t
+        self.y_reference=series.y_reference
+        self.y_origin=series.y_origin
+        self.y_increment=series.y_increment
+        self.channel_data=series.channel_data
+
+    def plot_ringdown(self,trace_number):
+        """Plots the ringdown and the fit"""
+        plt.plot(self.time_data*1e6,self.channel_data[trace_number],color='k')
+        plt.title("Ringdown")
+        plt.ylabel("Voltage (V)")
+        plt.xlabel("time (us)")
+        plt.xlim(self.left_plot_limit,self.right_plot_limit)
+
+    @staticmethod
+    def fit_function(t,A,tau,c):
+        """Function for fitting data: Gaussian with constant offset"""
+        return A*np.exp(-t/tau)+c
+
+    @staticmethod
+    def fit_jacobian(t,A,tau,c):
+        """Jacobian of derivatives for fit function"""
+        return [np.exp(-t/tau),A*np.exp(-t/tau)/tau**2,np.ones(len(t))]
+
+    def plot_ringdown(self,trace_number=0):
+        """Plots the ringdown and the fit"""
+        plt.title("Ringdown")
+        plt.ylabel("Voltage (V)")
+        plt.xlabel("time (us)")
+        plt.xlim(self.left_plot_limit,self.right_plot_limit)
+        time_data=self.time_data
+        plt.plot(time_data*1e6,self.converted_data[trace_number],
+                color='k')
+        params=self.params[trace_number]
+        left_index=self.time_to_index(self.left_fit_limit)
+        right_index=self.time_to_index(self.right_fit_limit)
+        fit_times=time_data[left_index:right_index]
+        fit_vals=self.fit_function(fit_times,*params)
+        plt.plot(fit_times*1e6,fit_vals,color='r')
