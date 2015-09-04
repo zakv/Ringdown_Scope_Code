@@ -84,6 +84,8 @@ class AgilentScope:
         ascii_data= self.read(25).split(',')[0]
         #Print data for comparison
         print "ASCII: %s, and converted: %f" % (ascii_data, converted_data)
+        #Unlock scope
+        self.unlock()
         return
 
     def get_single_trace(self,channel_number):
