@@ -2,8 +2,9 @@ import os
 import time
 import numpy
 import cPickle as pickle
-from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+from scipy.signal import butter, lfilter
+from scipy.optimize import curve_fit
 np=numpy
 
 class usbtmc:
@@ -139,6 +140,8 @@ class Measurement_Series(object):
     initial_params=(0.06,2e-6,0.02) #Amplitude, decay time, offset
     left_fit_limit=0.7e-6 #time to begin fit
     right_fit_limit=15e-6 #time to end fit
+    filter_order=10
+    filter_cutoff=10e6 #in Hz
 
     def __init__(self,scope):
         """Initializes a Measurement_Series instance from an AgilentScope"""
@@ -154,6 +157,7 @@ class Measurement_Series(object):
         self._did_fit=False
         self._params=np.array([])
         self.file_name=''
+        self._butter_lowpass_polynomials=None
 
     def get_scope_settings(self):
         """Sets attributes to reflect current scope settings"""
@@ -189,6 +193,14 @@ class Measurement_Series(object):
                     'trying to convert it')
         converted_data=((self.y_reference-1)-channel_data)*self.y_increment-self.y_origin
         return converted_data
+
+    @property
+    def filtered_data(self):
+        """converted_data (in volts) passed through a Buttersworth filter"""
+        converted_data=self.converted_data
+        b, a = self.butter_lowpass_polynomials
+        filtered_data = lfilter(b, a, converted_data)
+        return filtered_data
 
     @property
     def time_data(self):
@@ -238,14 +250,15 @@ class Measurement_Series(object):
         left_index=self.time_to_index(self.left_fit_limit)
         right_index=self.time_to_index(self.right_fit_limit)
         time_data=self.time_data[left_index:right_index]
-        converted_data=self.converted_data
+        filtered_data=self.filtered_data
         initial_params=self.initial_params
         params_array=np.zeros([self.n_traces,len(self.initial_params)])
         j=0;
-        for trace in converted_data:
+        for trace in filtered_data:
             one_params=curve_fit(fit_function, time_data,
                     trace[left_index:right_index], initial_params,
-                    Dfun=self.fit_jacobian)[0]
+                    #Dfun=self.fit_jacobian)[0]
+                    Dfun=None)[0]
             params_array[j]=one_params
             j+=1
         self.params=params_array
@@ -272,13 +285,13 @@ class Measurement_Series(object):
         self.y_increment=series.y_increment
         self.channel_data=series.channel_data
 
-    def plot_ringdown(self,trace_number):
-        """Plots the ringdown and the fit"""
-        plt.plot(self.time_data*1e6,self.channel_data[trace_number],color='k')
-        plt.title("Ringdown")
-        plt.ylabel("Voltage (V)")
-        plt.xlabel("time (us)")
-        plt.xlim(self.left_plot_limit,self.right_plot_limit)
+#    def plot_ringdown(self,trace_number):
+#        """Plots the ringdown and the fit"""
+#        plt.plot(self.time_data*1e6,self.channel_data[trace_number],color='k')
+#        plt.title("Ringdown")
+#        plt.ylabel("Voltage (V)")
+#        plt.xlabel("time (us)")
+#        plt.xlim(self.left_plot_limit,self.right_plot_limit)
 
     @staticmethod
     def fit_function(t,A,tau,c):
@@ -298,19 +311,27 @@ class Measurement_Series(object):
 
     def plot_ringdown(self,trace_number=0):
         """Plots the ringdown and the fit"""
-        plt.title("Ringdown")
+        plt.figure()
+        tau=self.tau_array[trace_number]
+        plt.title("Ringdown tau=%1.2fus %s" % (tau*1e6,self.file_name))
         plt.ylabel("Voltage (V)")
         plt.xlabel("time (us)")
         plt.xlim(self.left_plot_limit,self.right_plot_limit)
         time_data=self.time_data
         plt.plot(time_data*1e6,self.converted_data[trace_number],
-                color='k')
+                color='k',label='data')
+        plt.plot(time_data*1e6,self.filtered_data[trace_number],
+                color='g',label='filtered data')
         params=self.params[trace_number]
         left_index=self.time_to_index(self.left_fit_limit)
         right_index=self.time_to_index(self.right_fit_limit)
         fit_times=time_data[left_index:right_index]
         fit_vals=self.fit_function(fit_times,*params)
-        plt.plot(fit_times*1e6,fit_vals,color='r')
+        plt.plot(fit_times*1e6,fit_vals,color='r',label='fit')
+        legend=plt.legend()
+        #Make legend lines thicker and easier to see
+        for obj in legend.legendHandles:
+            obj.set_linewidth(3.0)
 
     def save(self,overwrite=False):
         """Saves measurement_series instance to disk
@@ -332,3 +353,19 @@ class Measurement_Series(object):
         with open(file_name,'rb') as file:
             series=pickle.load(file)
         return series
+
+    @property
+    def sample_frequency(self):
+        """Sample frequency of the scope"""
+        return 1/self.delta_t
+
+    @property
+    def butter_lowpass_polynomials(self):
+        """Polynomials for filter"""
+        if self._butter_lowpass_polynomials:
+            b,a=self._butter_lowpass_polynomials
+        else:
+            nyquist = 0.5 * self.sample_frequency
+            low = self.filter_cutoff/ nyquist
+            b, a = butter(self.filter_order, low, btype='low')
+        return b, a
