@@ -307,7 +307,8 @@ class Measurement_Series(object):
         res = np.hstack( ( term1, term2, term3) )
         return res
 
-    def plot_ringdown(self,trace_number=0):
+    def plot_ringdown(self,trace_number=0,plot_unfiltered=True,
+            plot_filtered=True,plot_fit=True):
         """Plots the ringdown and the fit"""
         plt.figure()
         tau=self.tau_array[trace_number]
@@ -316,16 +317,19 @@ class Measurement_Series(object):
         plt.xlabel("time (us)")
         plt.xlim(self.left_plot_limit,self.right_plot_limit)
         time_data=self.time_data
-        plt.plot(time_data*1e6,self.converted_data[trace_number],
-                color='k',label='data')
-        plt.plot(time_data*1e6,self.filtered_data[trace_number],
-                color='g',label='filtered data')
-        params=self.params[trace_number]
-        left_index=self.time_to_index(self.left_fit_limit)
-        right_index=self.time_to_index(self.right_fit_limit)
-        fit_times=time_data[left_index:right_index]
-        fit_vals=self.fit_function(fit_times,*params)
-        plt.plot(fit_times*1e6,fit_vals,color='r',label='fit')
+        if plot_unfiltered:
+            plt.plot(time_data*1e6,self.converted_data[trace_number],
+                    color='k',label='data')
+        if plot_filtered:
+            plt.plot(time_data*1e6,self.filtered_data[trace_number],
+                    color='g',label='filtered data')
+        if plot_fit:
+            params=self.params[trace_number]
+            left_index=self.time_to_index(self.left_fit_limit)
+            right_index=self.time_to_index(self.right_fit_limit)
+            fit_times=time_data[left_index:right_index]
+            fit_vals=self.fit_function(fit_times,*params)
+            plt.plot(fit_times*1e6,fit_vals,color='r',label='fit')
         legend=plt.legend()
         #Make legend lines thicker and easier to see
         for obj in legend.legendHandles:
