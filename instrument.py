@@ -123,6 +123,15 @@ class AgilentScope:
         self.unlock()
         return series
 
+    def measure_tau(self,n_traces=10,channel_number=1,print_result=False):
+        """Returns tau, tau_uncertainty, and a measurement_series instance"""
+        series=self.get_multiple_traces(n_traces,channel_number)
+        tau=series.tau_mean
+        tau_uncertainty=series.tau_uncertainty
+        if print_result:
+            print "Tau is (%1.2f +/- %1.2f)us" % (tau*1e6,tau_uncertainty*1e6)
+        return tau,tau_uncertainty,series
+
     def unlock(self):
         """Unlocks the buttons on the scope for manual use"""
         self.write(":KEY:LOCK DISable")
