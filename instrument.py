@@ -5,6 +5,7 @@ import cPickle as pickle
 import matplotlib.pyplot as plt
 from scipy.signal import butter, lfilter
 from scipy.optimize import curve_fit
+from math import sqrt
 np=numpy
 
 class usbtmc:
@@ -237,13 +238,18 @@ class Measurement_Series(object):
 
     @property
     def tau_mean(self):
-        """The mean tau from all the fits in the Measurement_Series"""
+        """The mean tau from all the fits in the Measurement_Series in sec"""
         return np.mean(self.tau_array)
 
     @property
     def tau_std(self):
-        """The standard deviation of tau from the fits"""
-        return np.std(self.tau_array)
+        """The standard deviation of tau from the fits in sec"""
+        return np.std(self.tau_array,ddof=1)
+
+    @property
+    def tau_uncertainty(self):
+        """The error on tau_mean in sec"""
+        return self.tau_std/sqrt(self.n_traces)
 
     def fit_data(self):
         """Fits fit_function to each trace and stores the results"""
