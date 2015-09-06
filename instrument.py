@@ -58,7 +58,7 @@ class AgilentScope:
         self.write(":WAVEFORM:POINTS 10240")
         self.write(":STOP")
         self.write(":WAV:DATA? CHAN%d" % channel_number)
-        #time.sleep(0.01)
+        time.sleep(0.1)
         number_digits=self.read(2)
         number_digits=int(number_digits[1])
         number_data_points=int(self.read(number_digits))
@@ -123,7 +123,7 @@ class AgilentScope:
         self.unlock()
         return series
 
-    def measure_tau(self,n_traces=10,channel_number=1,print_result=False):
+    def measure_tau(self,n_traces=10,channel_number=1,print_result=True):
         """Returns tau, tau_uncertainty, and a measurement_series instance"""
         series=self.get_multiple_traces(n_traces,channel_number)
         tau=series.tau_mean
@@ -131,6 +131,15 @@ class AgilentScope:
         if print_result:
             print "Tau is (%1.2f +/- %1.2f)us" % (tau*1e6,tau_uncertainty*1e6)
         return tau,tau_uncertainty,series
+
+    def measure_repeatedly(self,n_traces=10,channel_number=1):
+        """Constantly measures tau and prints the result
+
+        n_traces gives the number of traces to fit/average to get tau"""
+        while True:
+            self.measure_tau(self,n_traces=n_traces,
+                    channel_number=channel_numberm,
+                    print_result=True)
 
     def unlock(self):
         """Unlocks the buttons on the scope for manual use"""
