@@ -51,7 +51,7 @@ class AgilentScope:
         """Read an arbitrary amount of data directly from the scope"""
         return self.meas.read(length)
 
-    def get_channel_data(self, channel_number):
+    def get_channel_data(self, channel_number,verbose=False):
         """Automatically returns the y-values in volts for the specified channel"""
         self.write(":WAV:POIN:MODE RAW")
         self.write(":WAV:FORM BYTE")
@@ -66,8 +66,9 @@ class AgilentScope:
         #data = numpy.frombuffer(rawdata, 'B')
         data = numpy.frombuffer(rawdata,np.uint8)
         while len(data)<number_data_points:
-            print  ("Data length should be %d, but is only %d" %
-                    (number_data_points,len(data)))
+            if verbose:
+                print  ("Data length should be %d, but is only %d" %
+                        (number_data_points,len(data)))
             raise BufferError( "Data length should be %d, but is only %d" %
                 (number_data_points,len(data)) )
         return data
@@ -91,7 +92,7 @@ class AgilentScope:
         self.unlock()
         return
 
-    def get_single_trace(self,channel_number):
+    def get_single_trace(self,channel_number,verbose=False):
         """Takes a new trace and returns the channel_data"""
         self.write(":SINGLE") #Set trigger to single
         self.write(":TRIGger:STATus?") #Wait until scope takes data
@@ -101,9 +102,11 @@ class AgilentScope:
             self.write(":TRIGger:STATus?")
             trigger_status=self.read()
         try:
-            data=self.get_channel_data(channel_number) #Retrieve scope data
+        #Retrieve scope data
+            data=self.get_channel_data(channel_number,verbose=verbose)
         except BufferError:
-            print "Trying to take another trace..."
+            if verbose:
+                print "Trying to take another trace..."
             data=self.get_single_trace(channel_number)
         return data
 
