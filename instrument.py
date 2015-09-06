@@ -51,7 +51,7 @@ class AgilentScope:
         """Read an arbitrary amount of data directly from the scope"""
         return self.meas.read(length)
 
-    def get_channel_data(self, channel_number,verbose=False):
+    def get_channel_data(self, channel_number=1,verbose=False):
         """Automatically returns the y-values in volts for the specified channel"""
         self.write(":WAV:POIN:MODE RAW")
         self.write(":WAV:FORM BYTE")
@@ -92,7 +92,7 @@ class AgilentScope:
         self.unlock()
         return
 
-    def get_single_trace(self,channel_number,verbose=False):
+    def get_single_trace(self,channel_number=1,verbose=False):
         """Takes a new trace and returns the channel_data"""
         self.write(":SINGLE") #Set trigger to single
         self.write(":TRIGger:STATus?") #Wait until scope takes data
@@ -333,9 +333,9 @@ class Measurement_Series(object):
         """Plots the ringdown and the fit"""
         plt.figure()
         tau=self.tau_array[trace_number]
-        plt.title("Ringdown tau=%1.2fus %s" % (tau*1e6,self.file_name))
+        plt.title(r"Ringdown $\tau$=%1.2f$\mu$s %s" % (tau*1e6,self.file_name))
         plt.ylabel("Voltage (V)")
-        plt.xlabel("time (us)")
+        plt.xlabel(r"time ($\mu$s)")
         plt.xlim(self.left_plot_limit,self.right_plot_limit)
         time_data=self.time_data
         if plot_unfiltered:
@@ -392,3 +392,19 @@ class Measurement_Series(object):
             low = self.filter_cutoff/ nyquist
             b, a = butter(self.filter_order, low, btype='low')
         return b, a
+
+    def plot_tau_histogram(self):
+        """Plots a histogram of the tau values"""
+        plt.figure()
+        plt.hist(self.tau_array*1e6)
+        plt.title(r'Measured $\tau$ values')
+        plt.xlabel(r'$\tau$ (us)')
+        plt.ylabel('bin count')
+
+    def plot_tau_series(self):
+        """Plots tau values in the order in which they were measured"""
+        plt.figure()
+        plt.plot(self.tau_array*1e6,marker='x')
+        plt.title(r"$\tau$ measurements")
+        plt.xlabel("Measurement Index")
+        plt.ylabel(r"$\tau$ ($\mu$s)")
