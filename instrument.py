@@ -113,7 +113,7 @@ class AgilentScope:
         return data
 
     def get_multiple_traces(self,n_traces=10,channel_number=1):
-        """Takes multiple traces and returns an array with each trace as a row"""
+        """Takes multiple traces and returns a Measurement_Series instance"""
         #Prepare object to hold data
         series=Measurement_Series(self)
         series.get_scope_settings()
