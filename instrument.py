@@ -142,8 +142,8 @@ class AgilentScope:
 
         n_traces gives the number of traces to fit/average to get tau"""
         while True:
-            self.measure_tau(self,n_traces=n_traces,
-                    channel_number=channel_numberm,
+            self.measure_tau(n_traces=n_traces,
+                    channel_number=channel_number,
                     print_result=True)
 
     def unlock(self):
