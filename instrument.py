@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter, lfilter
 from scipy.optimize import curve_fit
 from math import sqrt
+import commands
 np=numpy
 
 class usbtmc:
@@ -14,6 +15,7 @@ class usbtmc:
     def __init__(self, device):
         self.device = device
         try:
+            commands.getoutput('sudo /home/zak/Programs/Bash/chmod_scope.sh')
             self.FILE = os.open(device, os.O_RDWR)
         except OSError:
             raise OSError('Plug in scope and run ' +
