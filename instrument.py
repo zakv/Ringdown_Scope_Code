@@ -335,7 +335,8 @@ class Measurement_Series(object):
         """Plots the ringdown and the fit"""
         plt.figure()
         tau=self.tau_array[trace_number]
-        plt.title(r"Ringdown $\tau$=%1.2f$\mu$s %s" % (tau*1e6,self.file_name))
+        plt.title(r"Ringdown $\tau$=%1.2f$\mu$s %s Trace %d" %
+                (tau*1e6,self.file_name,trace_number))
         plt.ylabel("Voltage (V)")
         plt.xlabel(r"time ($\mu$s)")
         plt.xlim(self.left_plot_limit,self.right_plot_limit)
