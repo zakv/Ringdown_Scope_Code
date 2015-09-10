@@ -26,7 +26,15 @@ class usbtmc:
         #time.sleep(.1)
 
     def read(self, length = 10000):
-        return os.read(self.FILE, length)
+        try:
+            raise OSError("I'm raising this intentionally")
+            return os.read(self.FILE, length)
+            print "HERE"
+        except OSError:
+            print "Caught an OSError"
+            raise OSError("I'm raising this intentionally")
+            return None
+        #return self.FILE.read(length)
 
     def getName(self):
         self.write("*IDN?")
@@ -106,9 +114,17 @@ class AgilentScope:
         try:
         #Retrieve scope data
             data=self.get_channel_data(channel_number,verbose=verbose)
-        except (BufferError,OSError):
+        except BufferError:
             if verbose:
                 print "Trying to take another trace..."
+            data=self.get_single_trace(channel_number)
+#        except OSError:
+#            if verbose:
+#                print "Timed out, trying to take another trace..."
+#            data=self.get_single_trace(channel_number)
+        if data==None:
+            #Happens if we get an OSError which doesn't get caught above
+            #for some reason
             data=self.get_single_trace(channel_number)
         return data
 
@@ -162,10 +178,13 @@ class Measurement_Series(object):
     left_plot_limit=-1.5 #time in us
     right_plot_limit=20  #time in us
     initial_params=(0.06,2e-6,0.02) #Amplitude, decay time, offset
-    left_fit_limit=0.7e-6 #time to begin fit
-    right_fit_limit=15e-6 #time to end fit
+    left_fit_limit=2e-6#0.7e-6 #time to begin fit
+    right_fit_limit=20e-6#15e-6 #time to end fit
     filter_order=10
     filter_cutoff=10e6 #in Hz
+    criteria_time=2e-6 #time (sec) at which criteria to keep data is applied
+    criteria_voltage_min=1. #Minimum voltage to keep trace (Volts)
+    criteria_voltage_max=4. #Maximum voltage to keep trace (Volts)
 
     def __init__(self,scope):
         """Initializes a Measurement_Series instance from an AgilentScope"""
@@ -247,7 +266,7 @@ class Measurement_Series(object):
     @property
     def params(self):
         """Array with each row containing fit parameters"""
-        if self._params.size==0:
+        if self._params.size==0 or self._did_fit==False:
             self.fit_data()
         return self._params
     @params.setter
@@ -274,8 +293,11 @@ class Measurement_Series(object):
         """The error on tau_mean in sec"""
         return self.tau_std/sqrt(self.n_traces)
 
-    def fit_data(self):
-        """Fits fit_function to each trace and stores the results"""
+    def fit_data(self,remove_bad_traces=True):
+        """Fits fit_function to each trace and stores the results
+
+        By default this will call self.remove_bad_traces()"""
+        self.remove_bad_traces()
         left_index=self.time_to_index(self.left_fit_limit)
         right_index=self.time_to_index(self.right_fit_limit)
         time_data=self.time_data[left_index:right_index]
@@ -284,7 +306,8 @@ class Measurement_Series(object):
         params_array=np.zeros([self.n_traces,len(self.initial_params)])
         j=0;
         for trace in filtered_data:
-            one_params=curve_fit(fit_function, time_data,
+            one_params=curve_fit(Measurement_Series.fit_function,
+                    time_data,
                     trace[left_index:right_index], initial_params,
                     #Dfun=self.fit_jacobian)[0]
                     Dfun=None)[0]
@@ -411,3 +434,22 @@ class Measurement_Series(object):
         plt.title(r"$\tau$ measurements")
         plt.xlabel("Measurement Index")
         plt.ylabel(r"$\tau$ ($\mu$s)")
+
+    def remove_bad_traces(self):
+        """Removes bad traces from the data set
+
+        Throws out traces if the voltage at time
+        Measurement_Series.criteria_time is less than
+        Measurement_Series.criteria_voltage_min"""
+        channel_data=self.channel_data
+        filtered_data=self.filtered_data
+        criteria_time=Measurement_Series.criteria_time
+        criteria_voltage_min=Measurement_Series.criteria_voltage_min
+        criteria_voltage_max=Measurement_Series.criteria_voltage_max
+        index=self.time_to_index(criteria_time)
+        #Find out whether each row passes the criteria
+        big_enough= (filtered_data[:,index]>criteria_voltage_min)
+        small_enough= (filtered_data[:,index]<criteria_voltage_max)
+        row_useful= np.logical_and(big_enough,small_enough)
+        #Now select only those rows and update self.channel_data
+        self.channel_data=channel_data[row_useful]
