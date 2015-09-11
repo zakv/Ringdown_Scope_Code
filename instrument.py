@@ -27,12 +27,10 @@ class usbtmc:
 
     def read(self, length = 10000):
         try:
-            raise OSError("I'm raising this intentionally")
             return os.read(self.FILE, length)
             print "HERE"
         except OSError:
             print "Caught an OSError"
-            raise OSError("I'm raising this intentionally")
             return None
         #return self.FILE.read(length)
 
@@ -118,13 +116,9 @@ class AgilentScope:
             if verbose:
                 print "Trying to take another trace..."
             data=self.get_single_trace(channel_number)
-#        except OSError:
-#            if verbose:
-#                print "Timed out, trying to take another trace..."
-#            data=self.get_single_trace(channel_number)
         if data==None:
-            #Happens if we get an OSError which doesn't get caught above
-            #for some reason
+            #Happens if we get an OSError which get caught when I included it
+            #in the above try/except for some reason
             data=self.get_single_trace(channel_number)
         return data
 
