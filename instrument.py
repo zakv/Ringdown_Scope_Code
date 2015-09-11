@@ -177,7 +177,6 @@ class Measurement_Series(object):
     #Class constants
     left_plot_limit=-1.5 #time in us
     right_plot_limit=20  #time in us
-    initial_params=(0.06,2e-6,0.02) #Amplitude, decay time, offset
     left_fit_limit=2e-6#0.7e-6 #time to begin fit
     right_fit_limit=20e-6#15e-6 #time to end fit
     filter_order=10
@@ -302,10 +301,17 @@ class Measurement_Series(object):
         right_index=self.time_to_index(self.right_fit_limit)
         time_data=self.time_data[left_index:right_index]
         filtered_data=self.filtered_data
-        initial_params=self.initial_params
-        params_array=np.zeros([self.n_traces,len(self.initial_params)])
+        params_array=np.zeros([self.n_traces,3])
+        c_left_index=self.time_to_index(20e-6)
+        c_right_index=self.time_to_index(30e-6)
         j=0;
         for trace in filtered_data:
+            #Guess some initial fitting values
+            A=trace[left_index] #amplitude estimate
+            tau=2e-6 #lifetime estimate
+            c=np.mean(trace[c_left_index:c_right_index]) #offset estimate
+            initial_params=(A,tau,c)
+            #Do nonlinear fit
             one_params=curve_fit(Measurement_Series.fit_function,
                     time_data,
                     trace[left_index:right_index], initial_params,
