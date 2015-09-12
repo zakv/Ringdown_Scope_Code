@@ -184,7 +184,6 @@ class AgilentScope:
             series.channel_data=all_data
             series.remove_bad_traces()
             traces_needed=n_traces-series.n_traces
-            print traces_needed
         self.unlock()
         return series
 
