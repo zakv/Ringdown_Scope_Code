@@ -28,11 +28,8 @@ class usbtmc:
     def read(self, length = 10000):
         try:
             return os.read(self.FILE, length)
-            print "HERE"
         except OSError:
-            print "Caught an OSError"
             return None
-        #return self.FILE.read(length)
 
     def getName(self):
         self.write("*IDN?")
@@ -46,9 +43,12 @@ class AgilentScope:
     """Class to control a Rigol DS1000 series oscilloscope"""
     def __init__(self, device):
         self.meas = usbtmc(device)
-
         self.name = self.meas.getName()
-
+        self.time_offset=None
+        self.delta_t=None
+        self.y_reference=None
+        self.y_origin=None
+        self.y_increment=None
         print "Connected to " + self.name
 
     def write(self, command):
@@ -100,8 +100,46 @@ class AgilentScope:
         self.unlock()
         return
 
-    def get_single_trace(self,channel_number=1,verbose=False):
+    def get_scope_settings(self):
+        """sets attributes to reflect current scope settings"""
+        self.write(":wav:xor?")
+        self.time_offset=float(self.read(20))
+        self.write(":wav:xinc?")
+        self.delta_t=float(self.read(20))
+        self.write(":wav:yref?")
+        self.y_reference=float(self.read(20))
+        self.write(":wav:yor?")
+        self.y_origin=float(self.read(20))
+        self.write(":wav:yinc?")
+        self.y_increment=float(self.read(20))
+
+    def data_criteria_met(self,data):
+        """Checks to see if data satisfies the selection criteria"""
+        criteria_time=Measurement_Series.criteria_time
+        criteria_voltage_min=Measurement_Series.criteria_voltage_min
+        criteria_voltage_max=Measurement_Series.criteria_voltage_max
+        index=self.time_to_index(criteria_time)
+        big_enough= ()
+
+    def set_series_scope_settings(self,series):
+        """Sets the scope-related attributes of a measurement_series"""
+        series.scope=self
+        self.write(":WAV:XOR?")
+        series.time_offset=float(self.read(20))
+        self.write(":WAV:XINC?")
+        series.delta_t=float(self.read(20))
+        self.write(":WAV:YREF?")
+        series.y_reference=float(self.read(20))
+        self.write(":WAV:YOR?")
+        series.y_origin=float(self.read(20))
+        self.write(":WAV:YINC?")
+        series.y_increment=float(self.read(20))
+
+    def get_single_trace(self,channel_number=1,verbose=False,
+            get_scope_settings=True):
         """Takes a new trace and returns the channel_data"""
+        if get_scope_settings:
+            self.get_scope_settings()
         self.write(":SINGLE") #Set trigger to single
         self.write(":TRIGger:STATus?") #Wait until scope takes data
         trigger_status=self.read()
@@ -113,28 +151,40 @@ class AgilentScope:
         #Retrieve scope data
             data=self.get_channel_data(channel_number,verbose=verbose)
         except BufferError:
+            #Call this method recursively until we don't get a BufferError
             if verbose:
                 print "Trying to take another trace..."
             data=self.get_single_trace(channel_number)
         if data==None:
             #Happens if we get an OSError which get caught when I included it
             #in the above try/except for some reason
+            #Call this method recursively until we don't get an OSError
             data=self.get_single_trace(channel_number)
         return data
 
     def get_multiple_traces(self,n_traces=10,channel_number=1):
         """Takes multiple traces and returns a Measurement_Series instance"""
+        #Get settings for converting times/voltages
+        self.get_scope_settings()
         #Prepare object to hold data
-        series=Measurement_Series(self)
-        series.get_scope_settings()
+        series=Measurement_Series()
+        self.set_series_scope_settings(series)
         #Start taking data
         one_data=self.get_single_trace(channel_number)
-        all_data=numpy.zeros([n_traces,len(one_data)],dtype=np.uint8)
-        all_data[0]=one_data
-        for j in range(1,n_traces):
-            one_data=self.get_single_trace(channel_number)
-            all_data[j]=one_data
-        series.channel_data=all_data
+        data_length=len(one_data)
+        series.channel_data=np.expand_dims(one_data,axis=0)
+        traces_needed=n_traces-series.n_traces
+        while traces_needed>0:
+            data_chunk=numpy.zeros([traces_needed,data_length],dtype=np.uint8)
+            for j in range(traces_needed):
+                one_data=self.get_single_trace(channel_number,
+                        get_scope_settings=False)
+                data_chunk[j]=one_data
+            all_data=np.vstack([series.channel_data,data_chunk])
+            series.channel_data=all_data
+            series.remove_bad_traces()
+            traces_needed=n_traces-series.n_traces
+            print traces_needed
         self.unlock()
         return series
 
@@ -179,9 +229,9 @@ class Measurement_Series(object):
     criteria_voltage_min=1. #Minimum voltage to keep trace (Volts)
     criteria_voltage_max=4. #Maximum voltage to keep trace (Volts)
 
-    def __init__(self,scope):
-        """Initializes a Measurement_Series instance from an AgilentScope"""
-        self.scope=scope
+    def __init__(self):
+        """Initializes a Measurement_Series instance"""
+        self.scope=None
         self._channel_data=np.array([])
         self.time_offset=None
         self.delta_t=None
@@ -196,7 +246,10 @@ class Measurement_Series(object):
         self._butter_lowpass_polynomials=None
 
     def get_scope_settings(self):
-        """Sets attributes to reflect current scope settings"""
+        """Sets attributes to reflect current scope settings
+
+        Now these are usually set right after initialization by the
+        AgilentScope instance"""
         scope=self.scope
         scope.write(":WAV:XOR?")
         self.time_offset=float(scope.read(20))
