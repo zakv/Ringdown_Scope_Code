@@ -3,6 +3,7 @@
 # Actual Data #
 ###############
 Ringdown_Data/*
+.ipynb_checkpoints/*
 
 # Compiled Python Files #
 #########################
