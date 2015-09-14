@@ -1,5 +1,9 @@
 # Custom ignores
 
+# Actual Data #
+###############
+Ringdown_Data/*
+
 # Compiled Python Files #
 #########################
 *.pyc
