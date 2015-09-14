@@ -174,8 +174,10 @@ class AgilentScope:
         data_length=len(one_data)
         series.channel_data=np.expand_dims(one_data,axis=0)
         traces_needed=n_traces-series.n_traces
+        interrupted=False
         try:
-            while traces_needed>0:
+            while traces_needed>0 and not interrupted:
+                #print traces_needed
                 data_chunk=numpy.zeros([traces_needed,data_length],
                         dtype=np.uint8)
                 try:
@@ -184,8 +186,8 @@ class AgilentScope:
                                 get_scope_settings=False)
                         data_chunk[j]=one_data
                 except KeyboardInterrupt:
-                    pass
-                all_data=np.vstack([ series.channel_data, data_chunk[:j] ])
+                    interrupted=True
+                all_data=np.vstack([ series.channel_data, data_chunk[:j+1] ])
                 series.channel_data=all_data
                 series.remove_bad_traces()
                 traces_needed=n_traces-series.n_traces
