@@ -150,8 +150,8 @@ class AgilentScope:
         try:
         #Retrieve scope data
             data=self.get_channel_data(channel_number,verbose=verbose)
-        except BufferError:
-            #Call this method recursively until we don't get a BufferError
+        except (BufferError,AttributeError) as error:
+            #Call this method recursively until we don't get an error
             if verbose:
                 print "Trying to take another trace..."
             data=self.get_single_trace(channel_number)
