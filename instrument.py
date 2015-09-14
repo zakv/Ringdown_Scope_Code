@@ -479,10 +479,25 @@ class Measurement_Series(object):
         plt.xlabel(r'$\tau$ (us)')
         plt.ylabel('bin count')
 
-    def plot_tau_series(self):
-        """Plots tau values in the order in which they were measured"""
+    def plot_tau_series(self,bin_size=10):
+        """Plots tau values in the order in which they were measured
+
+        This averages groups of bin_size measurements"""
+        #Drop data points to make sure its a multiple of bin_size
+        n_bins=int(round(self.n_traces/bin_size))
+        tau_array=self.tau_array[:(n_bins*bin_size)]
+        #Reshape data and take mean across rows
+        tau_array.shape=(n_bins,bin_size)
+        tau_means=np.mean(tau_array,axis=1)
+        tau_uncertainties=np.std(tau_array,axis=1,ddof=1)/np.sqrt(bin_size)
+        indices=np.arange(n_bins)+1
+        #Convert data to microseconds
+        tau_means=tau_means*1e6
+        tau_uncertainties=tau_uncertainties*1e6
+        #Plot the data
         plt.figure()
-        plt.plot(self.tau_array*1e6,marker='x')
+        plt.errorbar(indices,tau_means,yerr=tau_uncertainties, fmt='o')
+        plt.xlim(0,n_bins+1)
         plt.title(r"$\tau$ measurements")
         plt.xlabel("Measurement Index")
         plt.ylabel(r"$\tau$ ($\mu$s)")
