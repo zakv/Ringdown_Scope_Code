@@ -200,9 +200,11 @@ class AgilentScope:
         """Returns tau, tau_uncertainty, and a measurement_series instance"""
         series=self.get_multiple_traces(n_traces,channel_number)
         tau=series.tau_mean
+        tau_std=series.tau_std
         tau_uncertainty=series.tau_uncertainty
         if print_result:
-            print "Tau is (%1.2f +/- %1.2f)us" % (tau*1e6,tau_uncertainty*1e6)
+            print "Tau is (%1.2f +/- %1.2f)us with std %1.2fus" % \
+                (tau*1e6,tau_uncertainty*1e6,tau_std*1e6)
         return tau,tau_uncertainty,series
 
     def measure_repeatedly(self,n_traces=10,channel_number=1):
@@ -463,6 +465,16 @@ class Measurement_Series(object):
         with open(file_name,'rb') as file:
             series=pickle.load(file)
         return series
+
+    @classmethod
+    def load_updated(cls,file_name):
+        """Loads the file, updates the class instance, and returns the result"""
+        updated_series=Measurement_Series()
+        file_name=os.path.join('Ringdown_Data',file_name)
+        with open(file_name,'rb') as file:
+            old_series=pickle.load(file)
+        updated_series.copy_data(old_series)
+        return updated_series
 
     @property
     def sample_frequency(self):
