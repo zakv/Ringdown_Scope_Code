@@ -255,6 +255,13 @@ class Measurement_Series(object):
         self.file_name=''
         self._butter_lowpass_polynomials=None
 
+    def __getstate__(self):
+        """Had issues with pickling after scope usb was unplugged.  Hopefully
+        this should fix that issue"""
+        state = dict(self.__dict__)
+        state['scope']=None
+        return state
+
     def get_scope_settings(self):
         """Sets attributes to reflect current scope settings
 
@@ -392,13 +399,7 @@ class Measurement_Series(object):
 
         This is helpful when updating this class while you're not near the
         scope so you can't take any data"""
-        self.scope=series.scope
-        self.time_offset=series.time_offset
-        self.delta_t=series.delta_t
-        self.y_reference=series.y_reference
-        self.y_origin=series.y_origin
-        self.y_increment=series.y_increment
-        self.channel_data=series.channel_data
+        self.__dict__.update(series.__dict__)
 
     @staticmethod
     def fit_function(t,A,tau,c):
