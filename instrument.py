@@ -456,8 +456,16 @@ class Measurement_Series(object):
         if overwrite==False and os.path.exists(file_name):
             raise NameError('File %s already exists. ' % file_name+
                     'Set overwrite=True to overwrite it')
-        with open(file_name,'wb') as file:
-            pickle.dump(self,file,2)
+        try:
+            with open(file_name,'wb') as file:
+                pickle.dump(self,file,2)
+        except pickle.PicklingError:
+            #This happens when reload(instrument) is called after this
+            #instance was created.  Need to copy data to new instance then
+            #save it
+            series=Measurement_Series()
+            series.copy_data(self)
+            series.save(overwrite=overwrite)
 
     @classmethod
     def load(cls,file_name):
