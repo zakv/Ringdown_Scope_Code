@@ -254,6 +254,7 @@ class Measurement_Series(object):
         self._params=np.array([])
         self.file_name=''
         self._butter_lowpass_polynomials=None
+        self.time_stamp=time.time()
 
     def __getstate__(self):
         """Had issues with pickling after scope usb was unplugged.  Hopefully
