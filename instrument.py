@@ -196,8 +196,12 @@ class AgilentScope:
         self.unlock()
         return series
 
-    def measure_tau(self,n_traces=10,channel_number=1,print_result=True):
+    def measure_tau(self,n_traces=10,channel_number=1,print_result=True,
+            print_time=False):
         """Returns tau, tau_uncertainty, and a measurement_series instance"""
+        if print_time:
+            start_time=time.time()
+            print time.strftime("%c",time.localtime())
         series=self.get_multiple_traces(n_traces,channel_number)
         tau=series.tau_mean
         tau_std=series.tau_std
@@ -205,6 +209,8 @@ class AgilentScope:
         if print_result:
             print "Tau is (%1.2f +/- %1.2f)us with std %1.2fus" % \
                 (tau*1e6,tau_uncertainty*1e6,tau_std*1e6)
+        if print_time:
+            print "Elapsed time: %f s" % (time.time()-start_time)
         return tau,tau_uncertainty,series
 
     def measure_repeatedly(self,n_traces=10,channel_number=1):
