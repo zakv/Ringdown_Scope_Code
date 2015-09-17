@@ -211,6 +211,7 @@ class AgilentScope:
                 (tau*1e6,tau_uncertainty*1e6,tau_std*1e6)
         if print_time:
             print "Elapsed time: %f s" % (time.time()-start_time)
+        self.write(":RUN") #Set scope to Run when done
         return tau,tau_uncertainty,series
 
     def measure_repeatedly(self,n_traces=10,channel_number=1):
