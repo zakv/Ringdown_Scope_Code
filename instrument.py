@@ -212,6 +212,7 @@ class AgilentScope:
         if print_time:
             print "Elapsed time: %f s" % (time.time()-start_time)
         self.write(":RUN") #Set scope to Run when done
+        self.unlock()
         return tau,tau_uncertainty,series
 
     def measure_repeatedly(self,n_traces=10,channel_number=1):
@@ -243,7 +244,7 @@ class Measurement_Series(object):
     filter_order=10
     filter_cutoff=10e6 #in Hz
     criteria_time=2e-6 #time (sec) at which criteria to keep data is applied
-    criteria_voltage_min=1. #Minimum voltage to keep trace (Volts)
+    criteria_voltage_min=0.1#1. #Minimum voltage to keep trace (Volts)
     criteria_voltage_max=4. #Maximum voltage to keep trace (Volts)
 
     def __init__(self):
