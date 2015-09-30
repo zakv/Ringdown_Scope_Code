@@ -247,6 +247,8 @@ class Measurement_Series(object):
     criteria_time=2e-6 #time (sec) at which criteria to keep data is applied
     criteria_voltage_min=0.1#1. #Minimum voltage to keep trace (Volts)
     criteria_voltage_max=4. #Maximum voltage to keep trace (Volts)
+    criteria_frac_min=0.4 #Minimum amplitude as fraction of screen size
+    criteria_frac_max=1-2.0/256 #Maximum amplitude as fraction of screen size
 
     def __init__(self):
         """Initializes a Measurement_Series instance"""
@@ -307,6 +309,11 @@ class Measurement_Series(object):
         if channel_data.size==0:
             raise AttributeError('Series must have measurement data before '+
                     'trying to convert it')
+        converted_data=self._convert_data(channel_data)
+        return converted_data
+
+    def _convert_data(self,channel_data):
+        """Converts given channel_data to real voltages (in volts)"""
         converted_data=((self.y_reference-1)-channel_data)*self.y_increment-self.y_origin
         return converted_data
 
@@ -557,6 +564,8 @@ class Measurement_Series(object):
         #Find out whether each row passes the criteria
         big_enough= (filtered_data[:,index]>criteria_voltage_min)
         small_enough= (filtered_data[:,index]<criteria_voltage_max)
+        frac_big_enough= (filtered_data[:,index]<criteria_frac_max)
+        frac_small_enough= (filtered_data[:,index]<criteria_frac_min)
         row_useful= np.logical_and(big_enough,small_enough)
         #Now select only those rows and update self.channel_data
         self.channel_data=channel_data[row_useful]
