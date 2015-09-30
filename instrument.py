@@ -266,7 +266,7 @@ class Measurement_Series(object):
         self._trace_length=None
         self._did_fit=False
         self._params=np.array([])
-        self.file_name=''
+        self._file_name=''
         self._butter_lowpass_polynomials=None
         self.time_stamp=time.time()
 
@@ -376,6 +376,17 @@ class Measurement_Series(object):
         """The error on tau_mean in sec"""
         return self.tau_std/sqrt(self.n_traces)
 
+    @property
+    def file_name(self):
+        """File_name including path relative to ./Ringdown_Data/"""
+        return self._file_name
+    @file_name.setter
+    def file_name(self,value):
+        if len(value)<14 or value[:14] != 'Ringdown_Data'+os.sep:
+            value=os.path.join('Ringdown_Data',value)
+        value=os.path.normpath(value)
+        self._file_name=value
+
     def fit_data(self,remove_bad_traces=True):
         """Fits fit_function to each trace and stores the results
 
@@ -472,7 +483,7 @@ class Measurement_Series(object):
         Path is taken relative to the Ringdown_Data subdirectory"""
         if not self.file_name:
             raise AttributeError('self.file_name must be set before saving')
-        file_name=os.path.join('Ringdown_Data',self.file_name)
+        file_name=self.file_name
         if overwrite==False and os.path.exists(file_name):
             raise NameError('File %s already exists. ' % file_name+
                     'Set overwrite=True to overwrite it')
@@ -493,15 +504,14 @@ class Measurement_Series(object):
         file_name=os.path.join('Ringdown_Data',file_name)
         with open(file_name,'rb') as file:
             series=pickle.load(file)
+        series.file_name=file_name
         return series
 
     @classmethod
     def load_updated(cls,file_name):
         """Loads the file, updates the class instance, and returns the result"""
         updated_series=Measurement_Series()
-        file_name=os.path.join('Ringdown_Data',file_name)
-        with open(file_name,'rb') as file:
-            old_series=pickle.load(file)
+        old_series=Measurement_Series.load(file_name)
         updated_series.copy_data(old_series)
         return updated_series
 
