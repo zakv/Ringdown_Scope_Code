@@ -531,12 +531,16 @@ class Measurement_Series(object):
             b, a = butter(self.filter_order, low, btype='low')
         return b, a
 
-    def plot_tau_histogram(self):
+    def plot_tau_histogram(self,n_bins=10):
         """Plots a histogram of the tau values"""
         plt.figure()
-        plt.hist(self.tau_array*1e6)
+        counts,bin_edges,patches=plt.hist(self.tau_array*1e6,histtype='step')
+        bin_centers=0.5*(bin_edges[1:]+bin_edges[:-1])
+        plt.errorbar(bin_centers,counts,np.sqrt(counts),
+                linestyle='',
+                color='b')
         plt.title(r'Measured $\tau$ values')
-        plt.xlabel(r'$\tau$ (us)')
+        plt.xlabel(r'$\tau$ ($\mu$s)')
         plt.ylabel('bin count')
 
     def plot_tau_series(self,bin_size=10):
