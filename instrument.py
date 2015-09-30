@@ -247,8 +247,11 @@ class Measurement_Series(object):
     criteria_time=2e-6 #time (sec) at which criteria to keep data is applied
     criteria_voltage_min=0.1#1. #Minimum voltage to keep trace (Volts)
     criteria_voltage_max=4. #Maximum voltage to keep trace (Volts)
-    criteria_frac_min=0.4 #Minimum amplitude as fraction of screen size
-    criteria_frac_max=1-2.0/256 #Maximum amplitude as fraction of screen size
+    #The next two parameters are in the range 1-200 with 1 being the largest
+    #and 200 being the smallest.  That is nonintuitive but correct.
+    #One division on the scope is 20 here.
+    criteria_frac_min=140 #Minimum amplitude
+    criteria_frac_max=2 #Maximum amplitude
 
     def __init__(self):
         """Initializes a Measurement_Series instance"""
@@ -554,18 +557,26 @@ class Measurement_Series(object):
 
         Throws out traces if the voltage at time
         Measurement_Series.criteria_time is less than
-        Measurement_Series.criteria_voltage_min"""
+        Measurement_Series.criteria_voltage_min or greater than
+        Measurement_Series.criteria_voltage_max.  Also throws it out if that
+        voltage is less than criteria_frac_min or if it is above
+        criteria_frac_max where each of these is expressed as an integer
+        between 1 and 200 with 1 being the top of the screen and 200 being
+        the bottom.  I know that seems backwards but it is correct"""
         channel_data=self.channel_data
         filtered_data=self.filtered_data
         criteria_time=Measurement_Series.criteria_time
         criteria_voltage_min=Measurement_Series.criteria_voltage_min
         criteria_voltage_max=Measurement_Series.criteria_voltage_max
+        frac_min=self._convert_data(Measurement_Series.criteria_frac_min)
+        frac_max=self._convert_data(Measurement_Series.criteria_frac_max)
+        #Take most strict criteria
+        volt_min=max(criteria_voltage_min,frac_min)
+        volt_max=min(criteria_voltage_max,frac_max)
         index=self.time_to_index(criteria_time)
         #Find out whether each row passes the criteria
-        big_enough= (filtered_data[:,index]>criteria_voltage_min)
-        small_enough= (filtered_data[:,index]<criteria_voltage_max)
-        frac_big_enough= (filtered_data[:,index]<criteria_frac_max)
-        frac_small_enough= (filtered_data[:,index]<criteria_frac_min)
+        big_enough= (filtered_data[:,index]>volt_min)
+        small_enough= (filtered_data[:,index]<volt_max)
         row_useful= np.logical_and(big_enough,small_enough)
         #Now select only those rows and update self.channel_data
         self.channel_data=channel_data[row_useful]
