@@ -141,6 +141,7 @@ class AgilentScope:
         if get_scope_settings:
             self.get_scope_settings()
         self.write(":SINGLE") #Set trigger to single
+        self.write(":ACQuire:TYPE NORMal") #Important for transfering data to computer
         self.write(":TRIGger:STATus?") #Wait until scope takes data
         trigger_status=self.read()
         while trigger_status!='STOP\n':
