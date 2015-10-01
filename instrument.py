@@ -169,7 +169,10 @@ class AgilentScope:
             if verbose:
                 print "Trying to take another trace..."
             data=self.get_single_trace(channel_number)
-        if data==None or data.shape==(0,):
+        if data is None or data.shape==(0,):
+            if data.shape==(0,):
+                print "Empty in get_single_trace()"
+                print data
             #Get None if we get an OSError which wouldn't get caught when I
             #included it in the above try/except for some reason.
             #Sometimes data is empty if the buffer messes up, so we include
