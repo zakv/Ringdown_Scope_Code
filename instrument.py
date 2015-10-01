@@ -59,26 +59,39 @@ class AgilentScope:
         """Read an arbitrary amount of data directly from the scope"""
         return self.meas.read(length)
 
-    def get_channel_data(self, channel_number=1,verbose=False):
-        """Automatically returns the y-values in volts for the specified channel"""
+    def get_channel_data(self, channel_number=1,verbose=False,
+            depth=1,sleep_time=0.1):
+        """Automatically returns the y-values as an uint8 array for the specified channel"""
+        max_depth=10
         self.write(":WAV:POIN:MODE RAW")
         self.write(":WAV:FORM BYTE")
         self.write(":WAVEFORM:POINTS 10240")
         self.write(":STOP")
         self.write(":WAV:DATA? CHAN%d" % channel_number)
-        time.sleep(0.1)
+        time.sleep(sleep_time)
         number_digits=self.read(2)
         number_digits=int(number_digits[1])
         number_data_points=int(self.read(number_digits))
         rawdata = self.read(number_data_points)
-        #data = numpy.frombuffer(rawdata, 'B')
         data = numpy.frombuffer(rawdata,np.uint8)
-        while len(data)<number_data_points:
+        #Sometimes this transfer doesn't work.  Print debugging messages if
+        #verbose, then try again recursively up to max_depth times to transfer
+        #the data
+        if len(data)<number_data_points or len(data)==0:
             if verbose:
-                print  ("Data length should be %d, but is only %d" %
-                        (number_data_points,len(data)))
-            raise BufferError( "Data length should be %d, but is only %d" %
-                (number_data_points,len(data)) )
+                if len(data)<number_data_points:
+                    print  ("Data length should be %d, but is only %d" %
+                            (number_data_points,len(data)))
+                if len(data)==0:
+                    print "Data buffer from scope was empty during read"
+            if depth<max_depth:
+                if verbose:
+                    print "Trying to transfer data again, attempt %d" % depth
+                data=self.get_channel_data(channel_number,verbose,depth+1,
+                        sleep_time+0.1)
+            else:
+                raise BufferError("Data length should be %d, but is only %d" %
+                    (number_data_points,len(data)))
         return data
 
     def check_channel_scaling(self,channel_number=1):
@@ -156,10 +169,13 @@ class AgilentScope:
             if verbose:
                 print "Trying to take another trace..."
             data=self.get_single_trace(channel_number)
-        if data==None:
-            #Happens if we get an OSError which get caught when I included it
-            #in the above try/except for some reason
-            #Call this method recursively until we don't get an OSError
+        if data==None or data.shape==(0,):
+            #Get None if we get an OSError which wouldn't get caught when I
+            #included it in the above try/except for some reason.
+            #Sometimes data is empty if the buffer messes up, so we include
+            #that possibility as well.
+            #Call this method recursively until we don't get an OSError or an
+            #empty data set
             data=self.get_single_trace(channel_number)
         return data
 
