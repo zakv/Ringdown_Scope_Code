@@ -569,18 +569,26 @@ class Measurement_Series(object):
         #Drop data points to make sure its a multiple of bin_size
         n_bins=int(round(self.n_traces/bin_size))
         tau_array=self.tau_array[:(n_bins*bin_size)]
+        #Figure out if we should do error bars
+        do_errors=True
+        if bin_size==1:
+            do_errors=True
         #Reshape data and take mean across rows
         tau_array.shape=(n_bins,bin_size)
         tau_means=np.mean(tau_array,axis=1)
-        tau_uncertainties=np.std(tau_array,axis=1,ddof=1)/np.sqrt(bin_size)
-        indices=np.arange(n_bins)+1
+        if do_errors:
+            tau_uncertainties=np.std(tau_array,axis=1,ddof=1)/np.sqrt(bin_size)
+        indices=np.arange(n_bins)
         #Convert data to microseconds
         tau_means=tau_means*1e6
         tau_uncertainties=tau_uncertainties*1e6
         #Plot the data
         plt.figure()
-        plt.errorbar(indices,tau_means,yerr=tau_uncertainties, fmt='o')
-        plt.xlim(0,n_bins+1)
+        if do_errors:
+            plt.errorbar(indices,tau_means,yerr=tau_uncertainties,fmt='o')
+        else:
+           plt.plot(indices,tau_means,fmt='o')
+        plt.xlim(-0.5,n_bins-0.5)
         plt.title(r"$\tau$ measurements")
         plt.xlabel("Measurement Index")
         plt.ylabel(r"$\tau$ ($\mu$s)")
