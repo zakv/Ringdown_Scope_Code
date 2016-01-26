@@ -553,7 +553,7 @@ class Measurement_Series(object):
     def plot_tau_histogram(self,n_bins=10):
         """Plots a histogram of the tau values"""
         plt.figure()
-        counts,bin_edges,patches=plt.hist(self.tau_array*1e6,histtype='step')
+        counts,bin_edges,patches=plt.hist(self.tau_array*1e6,histtype='step',bins=n_bins)
         bin_centers=0.5*(bin_edges[1:]+bin_edges[:-1])
         plt.errorbar(bin_centers,counts,np.sqrt(counts),
                 linestyle='',
