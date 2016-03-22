@@ -259,8 +259,8 @@ class Measurement_Series(object):
     #Class constants
     left_plot_limit=-1.5 #time in us
     right_plot_limit=20  #time in us
-    left_fit_limit=2e-6#0.7e-6 #time to begin fit
-    right_fit_limit=20e-6#15e-6 #time to end fit
+    left_fit_limit=1.0e-6#0.7e-6#2e-6 #time to begin fit
+    right_fit_limit=15e-6#20e-6 #time to end fit
     filter_order=10
     filter_cutoff=10e6 #in Hz
     criteria_time=2e-6 #time (sec) at which criteria to keep data is applied
