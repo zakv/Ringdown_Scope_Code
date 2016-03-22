@@ -572,7 +572,7 @@ class Measurement_Series(object):
         #Figure out if we should do error bars
         do_errors=True
         if bin_size==1:
-            do_errors=True
+            do_errors=False
         #Reshape data and take mean across rows
         tau_array.shape=(n_bins,bin_size)
         tau_means=np.mean(tau_array,axis=1)
