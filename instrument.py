@@ -261,6 +261,7 @@ class Measurement_Series(object):
     right_plot_limit=20  #time in us
     left_fit_limit=1.0e-6#0.7e-6#2e-6 #time to begin fit
     right_fit_limit=15e-6#20e-6 #time to end fit
+    initial_tau_guess=2e-6 #Initial tau estimate given to fitting function (sec)
     filter_order=10
     filter_cutoff=10e6 #in Hz
     criteria_time=2e-6 #time (sec) at which criteria to keep data is applied
@@ -422,7 +423,7 @@ class Measurement_Series(object):
         for trace in filtered_data:
             #Guess some initial fitting values
             A=trace[left_index] #amplitude estimate
-            tau=2e-6 #lifetime estimate
+            tau=Measurement_Series.initial_tau_guess #lifetime estimate
             c=np.mean(trace[c_left_index:c_right_index]) #offset estimate
             initial_params=(A,tau,c)
             #Do nonlinear fit
